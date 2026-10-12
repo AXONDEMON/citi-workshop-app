@@ -48,9 +48,8 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 # Zip the backend folder automatically
 data "archive_file" "backend" {
   type        = "zip"
-  source_dir  = "${path.module}/../backend"
+  source_dir  = "${path.module}/../build/lambda"
   output_path = "${path.module}/backend.zip"
-  excludes    = [".venv", "__pycache__", "test_local.py"]
 }
 
 resource "aws_lambda_function" "api" {
