@@ -1,8 +1,5 @@
 import json
-import uuid
-
-# In-memory store for now. We'll swap this for MongoDB in Phase 4.
-NOTES = {}
+from store import store
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -20,36 +17,31 @@ def lambda_handler(event, context):
     method = event.get("httpMethod")
     path = event.get("path", "")
 
-    # CORS preflight: browsers send this before POST/DELETE
     if method == "OPTIONS":
         return response(200, {})
 
-    # GET /notes
-    if method == "GET" and path == "/notes":
-        return response(200, list(NOTES.values()))
+    try:
+        if method == "GET" and path == "/notes":
+            return response(200, store.list())
 
-    # POST /notes
-    if method == "POST" and path == "/notes":
-        try:
-            data = json.loads(event.get("body") or "{}")
-        except json.JSONDecodeError:
-            return response(400, {"error": "Invalid JSON"})
-        if not data.get("title"):
-            return response(400, {"error": "title is required"})
-        note = {
-            "id": str(uuid.uuid4()),
-            "title": data["title"],
-            "content": data.get("content", ""),
-        }
-        NOTES[note["id"]] = note
-        return response(201, note)
+        if method == "POST" and path == "/notes":
+            try:
+                data = json.loads(event.get("body") or "{}")
+            except json.JSONDecodeError:
+                return response(400, {"error": "Invalid JSON"})
+            if not data.get("title"):
+                return response(400, {"error": "title is required"})
+            note = store.create(data["title"], data.get("content", ""))
+            return response(201, note)
 
-    # DELETE /notes/<id>
-    if method == "DELETE" and path.startswith("/notes/"):
-        note_id = path.split("/")[-1]
-        if note_id not in NOTES:
-            return response(404, {"error": "Note not found"})
-        del NOTES[note_id]
-        return response(200, {"deleted": note_id})
+        if method == "DELETE" and path.startswith("/notes/"):
+            note_id = path.split("/")[-1]
+            if not store.delete(note_id):
+                return response(404, {"error": "Note not found"})
+            return response(200, {"deleted": note_id})
 
-    return response(404, {"error": "Route not found"})
+        return response(404, {"error": "Route not found"})
+
+    except Exception as e:
+        print("ERROR:", e)   # shows up in CloudWatch logs on AWS
+        return response(500, {"error": "Internal server error"})
