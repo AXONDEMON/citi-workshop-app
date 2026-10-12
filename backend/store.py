@@ -16,6 +16,14 @@ class MemoryStore:
 
     def delete(self, note_id):
         return self.notes.pop(note_id, None) is not None
+    
+    def update(self, note_id, title, content):
+        note = self.notes.get(note_id)
+        if note is None:
+            return None
+        note["title"] = title
+        note["content"] = content
+        return note
 
 
 class MongoStore:
@@ -35,6 +43,14 @@ class MongoStore:
 
     def delete(self, note_id):
         return self.col.delete_one({"id": note_id}).deleted_count == 1
+    def update(self, note_id, title, content):
+        from pymongo import ReturnDocument
+        return self.col.find_one_and_update(
+            {"id": note_id},
+            {"$set": {"title": title, "content": content}},
+            projection={"_id": 0},
+            return_document=ReturnDocument.AFTER,   # return the updated doc
+        )        
 
 
 # Created once per Lambda container and reused across requests

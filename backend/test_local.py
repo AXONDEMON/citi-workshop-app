@@ -14,3 +14,9 @@ call("GET", "/notes")
 call("DELETE", f"/notes/{created['id']}")
 call("GET", "/notes")                              # expect empty list
 call("DELETE", "/notes/does-not-exist")            # expect 404
+
+n = call("POST", "/notes", {"title": "Old", "content": "x"})
+call("PUT", f"/notes/{n['id']}", {"title": "New", "content": "y"})   # expect 200
+call("PUT", f"/notes/{n['id']}", {"content": "no title"})            # expect 400
+call("PUT", "/notes/missing", {"title": "t"})                        # expect 404
+call("GET", "/notes")                                                # shows "New"
