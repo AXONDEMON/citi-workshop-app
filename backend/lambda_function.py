@@ -5,7 +5,7 @@ HEADERS = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
 }
 
 
@@ -33,6 +33,18 @@ def lambda_handler(event, context):
                 return response(400, {"error": "title is required"})
             note = store.create(data["title"], data.get("content", ""))
             return response(201, note)
+        if method == "PUT" and path.startswith("/notes/"):
+            note_id = path.split("/")[-1]
+            try:
+                data = json.loads(event.get("body") or "{}")
+            except json.JSONDecodeError:
+                return response(400, {"error": "Invalid JSON"})
+            if not data.get("title"):
+                return response(400, {"error": "title is required"})
+            note = store.update(note_id, data["title"], data.get("content", ""))
+            if note is None:
+                return response(404, {"error": "Note not found"})
+            return response(200, note)               
 
         if method == "DELETE" and path.startswith("/notes/"):
             note_id = path.split("/")[-1]
